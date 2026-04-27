@@ -111,19 +111,56 @@ function find-text {
 
 function zip-this {
     <#
-    .SYNOPSIS  Zip current folder, skipping node_modules and .git.
+    .SYNOPSIS  Zip current folder. Skips common junk by default.
     .EXAMPLE   zip-this
     .EXAMPLE   zip-this -name "backup"
+    .EXAMPLE   zip-this -except "node_modules",".next","logs"
+    .EXAMPLE   zip-this -except "tests","docs" -name "release"
+    .EXAMPLE   zip-this -only "src","lib","package.json"
     #>
     param(
         [string]$Name = (Split-Path -Leaf (Get-Location)),
-        [string]$Path = "."
+        [string]$Path = ".",
+        [string[]]$Except = @('node_modules','.next','.git','dist','logs','test-results','playwright-report'),
+        [string[]]$Only
     )
-    $dest = Join-Path (Split-Path $Path) "$Name.zip"
-    Get-ChildItem $Path -Recurse -File |
-        Where-Object { $_.FullName -notmatch 'node_modules|\.next|\.git\\|dist\\|logs\\' } |
-        Compress-Archive -DestinationPath $dest -Force
-    Write-Host "Zipped to: $dest" -ForegroundColor Green
+    $dest = Join-Path (Split-Path (Resolve-Path $Path)) "$Name.zip"
+    if (Test-Path $dest) { Remove-Item $dest -Force }
+
+    if ($Only) {
+        # Zip ONLY specific files/folders
+        $files = @()
+        foreach ($item in $Only) {
+            $full = Join-Path $Path $item
+            if (Test-Path $full) {
+                if ((Get-Item $full).PSIsContainer) {
+                    $files += Get-ChildItem $full -Recurse -File
+                } else {
+                    $files += Get-Item $full
+                }
+            } else {
+                Write-Host "  Skipped (not found): $item" -ForegroundColor Yellow
+            }
+        }
+        if ($files.Count -eq 0) {
+            Write-Host "Nothing to zip." -ForegroundColor Yellow
+            return
+        }
+        $files | Compress-Archive -DestinationPath $dest -Force
+    } else {
+        # Zip everything EXCEPT the exclusion list
+        $pattern = ($Except | ForEach-Object { [regex]::Escape($_) }) -join '|'
+        $files = Get-ChildItem $Path -Recurse -File |
+            Where-Object { $_.FullName -notmatch $pattern }
+        if ($files.Count -eq 0) {
+            Write-Host "Nothing to zip after exclusions." -ForegroundColor Yellow
+            return
+        }
+        $files | Compress-Archive -DestinationPath $dest -Force
+    }
+
+    $size = [math]::Round((Get-Item $dest).Length / 1MB, 2)
+    Write-Host "Zipped to: $dest ($size MB)" -ForegroundColor Green
 }
 
 # ─── GIT OPERATIONS ─────────────────────────────────────────────
@@ -459,6 +496,8 @@ function shllshockd {
     Write-Host "    whats-here               List folder contents"
     Write-Host "    find-text `"string`"       Search inside files"
     Write-Host "    zip-this                 Zip folder (skip junk)"
+    Write-Host "    zip-this -except `"x`",`"y`" Zip but exclude specific"
+    Write-Host "    zip-this -only `"src`",`"lib`" Zip only specific items"
     Write-Host ""
     Write-Host "  GIT" -ForegroundColor Yellow
     Write-Host "    what-changed             Uncommitted changes"
