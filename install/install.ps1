@@ -1,10 +1,10 @@
 # ═══════════════════════════════════════════════════════════════
 # SHLLSHOCKD Installer
-# Run: irm https://raw.githubusercontent.com/Agyeman-Enterprises/shllshockd/main/install/install.ps1 | iex
+# Run: irm https://raw.githubusercontent.com/isaalia/shllshockd/main/install/install.ps1 | iex
 # ═══════════════════════════════════════════════════════════════
 
 $InstallDir = "$env:USERPROFILE\.shllshockd"
-$RepoUrl = "https://github.com/Agyeman-Enterprises/shllshockd/archive/refs/heads/main.zip"
+$RepoUrl = "https://github.com/isaalia/shllshockd/archive/refs/heads/main.zip"
 $TempZip = "$env:TEMP\shllshockd.zip"
 $TempExtract = "$env:TEMP\shllshockd-main"
 

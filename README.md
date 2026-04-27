@@ -23,7 +23,7 @@ That's it. Human words. The machine figures out the rest.
 ## Install (one command)
 
 ```powershell
-irm https://raw.githubusercontent.com/Agyeman-Enterprises/shllshockd/main/install/install.ps1 | iex
+irm https://raw.githubusercontent.com/isaalia/shllshockd/main/install/install.ps1 | iex
 ```
 
 Restart PowerShell. Type `shllshockd`. You're in.

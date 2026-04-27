@@ -144,6 +144,67 @@ function what-branch {
     git branch --show-current
 }
 
+function all-branches {
+    <#
+    .SYNOPSIS  List all branches (local and remote).
+    .EXAMPLE   all-branches
+    #>
+    Write-Host "  Local:" -ForegroundColor Yellow
+    git branch
+    Write-Host "  Remote:" -ForegroundColor Yellow
+    git branch -r
+}
+
+function new-branch {
+    <#
+    .SYNOPSIS  Create a new branch and switch to it.
+    .EXAMPLE   new-branch "feature/login-fix"
+    #>
+    param([Parameter(Mandatory)][string]$Name)
+    git checkout -b $Name
+    Write-Host "Created and switched to: $Name" -ForegroundColor Green
+}
+
+function switch-branch {
+    <#
+    .SYNOPSIS  Switch to an existing branch.
+    .EXAMPLE   switch-branch "main"
+    .EXAMPLE   switch-branch "feature/login-fix"
+    #>
+    param([Parameter(Mandatory)][string]$Name)
+    git checkout $Name
+}
+
+function delete-branch {
+    <#
+    .SYNOPSIS  Delete a branch (local only, unless -remote).
+    .EXAMPLE   delete-branch "feature/old-stuff"
+    .EXAMPLE   delete-branch "feature/old-stuff" -remote
+    #>
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [switch]$Remote
+    )
+    git branch -d $Name
+    if ($Remote) {
+        git push origin --delete $Name
+        Write-Host "Deleted local + remote: $Name" -ForegroundColor Green
+    } else {
+        Write-Host "Deleted local: $Name" -ForegroundColor Green
+    }
+}
+
+function merge-branch {
+    <#
+    .SYNOPSIS  Merge another branch into your current branch.
+    .EXAMPLE   merge-branch "feature/login-fix"
+    #>
+    param([Parameter(Mandatory)][string]$Name)
+    $current = git branch --show-current
+    Write-Host "Merging '$Name' into '$current'..." -ForegroundColor Yellow
+    git merge $Name
+}
+
 function undo-last-commit {
     <#
     .SYNOPSIS  Undo last commit but keep the files.
@@ -165,6 +226,52 @@ function push-it {
     git push
 }
 
+function force-push {
+    <#
+    .SYNOPSIS  Add, commit, push — skipping pre-commit hooks.
+               Use for repos where AEGIS enforcement doesn't apply
+               (public tools, forks, non-enforced repos).
+    .EXAMPLE   force-push "initial commit"
+    .EXAMPLE   force-push "updated URLs"
+    #>
+    param([Parameter(Mandatory)][string]$Message)
+    git add -A
+    git commit --no-verify -m $Message
+    git push
+    Write-Host "Force-pushed (hooks skipped)." -ForegroundColor Yellow
+}
+
+function pull-it {
+    <#
+    .SYNOPSIS  Pull latest changes from remote.
+    .EXAMPLE   pull-it
+    #>
+    git pull
+}
+
+function clone-it {
+    <#
+    .SYNOPSIS  Clone a repo into C:\DEV (or current folder).
+    .EXAMPLE   clone-it "https://github.com/isaalia/shllshockd.git"
+    .EXAMPLE   clone-it "isaalia/shllshockd"
+    #>
+    param([Parameter(Mandatory)][string]$Repo)
+    if ($Repo -notmatch '^http') {
+        $Repo = "https://github.com/$Repo.git"
+    }
+    git clone $Repo
+}
+
+function diff-it {
+    <#
+    .SYNOPSIS  Show what changed in detail (unstaged changes).
+    .EXAMPLE   diff-it
+    .EXAMPLE   diff-it "src/auth.ts"
+    #>
+    param([string]$File)
+    if ($File) { git diff $File } else { git diff }
+}
+
 function recent-commits {
     <#
     .SYNOPSIS  Show last N commits, clean format.
@@ -173,6 +280,27 @@ function recent-commits {
     #>
     param([int]$Count = 10)
     git log --oneline -n $Count
+}
+
+function who-did-this {
+    <#
+    .SYNOPSIS  Show who wrote each line of a file (git blame).
+    .EXAMPLE   who-did-this "src/auth.ts"
+    #>
+    param([Parameter(Mandatory)][string]$File)
+    git blame $File
+}
+
+function tag-it {
+    <#
+    .SYNOPSIS  Create a tag and push it.
+    .EXAMPLE   tag-it "v1.0"
+    .EXAMPLE   tag-it "v2.3.1"
+    #>
+    param([Parameter(Mandatory)][string]$Tag)
+    git tag $Tag
+    git push origin $Tag
+    Write-Host "Tagged and pushed: $Tag" -ForegroundColor Green
 }
 
 function stash-it {
@@ -191,6 +319,14 @@ function unstash {
     .EXAMPLE   unstash
     #>
     git stash pop
+}
+
+function repo-url {
+    <#
+    .SYNOPSIS  Show the remote URL of this repo.
+    .EXAMPLE   repo-url
+    #>
+    git remote get-url origin
 }
 
 # ─── SYSTEM / DEV OPS ───────────────────────────────────────────
@@ -327,11 +463,23 @@ function shllshockd {
     Write-Host "  GIT" -ForegroundColor Yellow
     Write-Host "    what-changed             Uncommitted changes"
     Write-Host "    what-branch              Current branch"
-    Write-Host "    undo-last-commit         Undo commit, keep files"
+    Write-Host "    all-branches             List all branches"
+    Write-Host "    new-branch `"name`"        Create + switch to branch"
+    Write-Host "    switch-branch `"name`"     Switch branches"
+    Write-Host "    delete-branch `"name`"     Delete a branch"
+    Write-Host "    merge-branch `"name`"      Merge branch into current"
     Write-Host "    push-it `"message`"        Add + commit + push"
+    Write-Host "    force-push `"message`"     Same but skip hooks"
+    Write-Host "    pull-it                  Pull latest from remote"
+    Write-Host "    clone-it `"repo`"          Clone a repo"
+    Write-Host "    diff-it                  Show detailed changes"
+    Write-Host "    undo-last-commit         Undo commit, keep files"
     Write-Host "    recent-commits           Last 10 commits"
+    Write-Host "    who-did-this `"file`"      Git blame in English"
+    Write-Host "    tag-it `"v1.0`"            Create + push a tag"
     Write-Host "    stash-it `"note`"          Save work without commit"
     Write-Host "    unstash                  Restore stashed work"
+    Write-Host "    repo-url                 Show remote URL"
     Write-Host ""
     Write-Host "  SYSTEM" -ForegroundColor Yellow
     Write-Host "    kill-port 3000           Kill process on port"
